@@ -3,6 +3,10 @@
   "framework": null,
   "installCommand": "echo 'No install needed'",
   "buildCommand": "mkdir -p public/todo && cp -a todoapp/html5/src/. public/ && cp -a todoapp/html5/src/. public/todo/",
-  "outputDirectory": "public",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/todo/api/items", "destination": "/api/todo/items" },
+    { "source": "/todo/api/items/:id", "destination": "/api/todo/items/:id" },
+    { "source": "/todo/api/host", "destination": "/api/todo/host" }
+  ]
 }
