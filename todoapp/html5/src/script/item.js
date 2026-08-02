@@ -164,9 +164,12 @@ var API_ROOT = (function () {
     return '';
 })();
 
+// On Vercel use /api/todo/* (avoids clashing with static /todo/ assets). Lab keeps /todo/api/*.
+var API_PREFIX = API_ROOT ? (API_ROOT + '/todo/api') : '/api/todo';
+
 // Service that provides items operations
 app.factory('itemService', function ($resource) {
-    return $resource(API_ROOT + '/todo/api/items/:id');
+    return $resource(API_PREFIX + '/items/:id');
 });
 
 
@@ -177,7 +180,7 @@ app.controller('hostController', function ($scope, hostService) {
 
 //Service that provides host operations
 app.factory('hostService', function ($resource) {
-    return $resource(API_ROOT + '/todo/api/host', null,
+    return $resource(API_PREFIX + '/host', null,
                 {
                 'get': { method:'GET' }
                 });
