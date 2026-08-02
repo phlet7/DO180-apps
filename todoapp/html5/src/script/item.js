@@ -155,9 +155,18 @@ app.controller('alertMessagesController', function ($scope) {
     };
 });
 
+// Use same-origin API on Vercel; keep the lab absolute URL for local DO180 split-host setup.
+var API_ROOT = (function () {
+    var host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host === 'api.lab.example.com' || /\.lab\.example\.com$/.test(host)) {
+        return 'http://api.lab.example.com:30080';
+    }
+    return '';
+})();
+
 // Service that provides items operations
 app.factory('itemService', function ($resource) {
-    return $resource('http://api.lab.example.com:30080/todo/api/items/:id');
+    return $resource(API_ROOT + '/todo/api/items/:id');
 });
 
 
@@ -168,7 +177,7 @@ app.controller('hostController', function ($scope, hostService) {
 
 //Service that provides host operations
 app.factory('hostService', function ($resource) {
-    return $resource('http://api.lab.example.com:30080/todo/api/host', null,
+    return $resource(API_ROOT + '/todo/api/host', null,
                 {
                 'get': { method:'GET' }
                 });
