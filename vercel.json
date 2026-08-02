@@ -6,6 +6,10 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/api/todo/(.*)",
+      "destination": "/api/todo-api?p=$1"
+    },
+    {
       "source": "/todo/api/(.*)",
       "destination": "/api/todo-api?p=$1"
     }
