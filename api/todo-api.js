@@ -2,11 +2,11 @@
 
 /**
  * Single serverless entrypoint for all /todo/api/* routes.
- * Important: create/list/read/delete must share one function so /tmp storage
- * is visible across operations (separate lambdas have isolated filesystems).
+ * Routed via vercel.json rewrite so create/list/read/delete share one isolate.
  */
-var store = require('../_lib/store');
+var store = require('./_lib/store');
 var os = require('os');
+var url = require('url');
 
 function sendJson(res, status, body) {
   res.statusCode = status;
@@ -31,26 +31,27 @@ function readBody(req) {
   return {};
 }
 
-function pathParts(req) {
-  // Catch-all: /api/todo/[...path] → req.query.path is string or string[]
-  var path = req.query && req.query.path;
-  if (Array.isArray(path)) {
-    return path.filter(Boolean);
+function resolveApiPath(req) {
+  // Prefer explicit rewrite query (?p=items/1)
+  if (req.query && typeof req.query.p === 'string' && req.query.p.length) {
+    return req.query.p.replace(/^\/+/, '').split('/').filter(Boolean);
   }
-  if (typeof path === 'string' && path.length) {
-    return path.split('/').filter(Boolean);
-  }
-  // Fallback: parse URL path after /api/todo/ or /todo/api/
-  var url = String(req.url || '').split('?')[0];
-  var marker = url.indexOf('/todo/api/');
-  if (marker === -1) {
-    marker = url.indexOf('/api/todo/');
-    if (marker !== -1) {
-      return url.slice(marker + '/api/todo/'.length).split('/').filter(Boolean);
+
+  // x-forwarded-uri / original URL when available
+  var original =
+    (req.headers && (req.headers['x-forwarded-uri'] || req.headers['x-invoke-path'])) ||
+    req.url ||
+    '';
+  var pathname = String(original).split('?')[0];
+
+  var markers = ['/todo/api/', '/api/todo/'];
+  for (var i = 0; i < markers.length; i++) {
+    var idx = pathname.indexOf(markers[i]);
+    if (idx !== -1) {
+      return pathname.slice(idx + markers[i].length).split('/').filter(Boolean);
     }
-    return [];
   }
-  return url.slice(marker + '/todo/api/'.length).split('/').filter(Boolean);
+  return [];
 }
 
 module.exports = function handler(req, res) {
@@ -63,9 +64,22 @@ module.exports = function handler(req, res) {
     return res.end();
   }
 
-  var parts = pathParts(req);
+  // Ensure query is parsed if runtime did not
+  if (!req.query) {
+    req.query = url.parse(req.url || '', true).query || {};
+  }
+
+  var parts = resolveApiPath(req);
   var resource = parts[0] || '';
   var id = parts[1];
+
+  console.log(JSON.stringify({
+    msg: 'todo-api',
+    method: req.method,
+    url: req.url,
+    parts: parts,
+    query: req.query
+  }));
 
   if (resource === 'host') {
     if (req.method !== 'GET') {
@@ -78,10 +92,9 @@ module.exports = function handler(req, res) {
   }
 
   if (resource !== 'items') {
-    return sendJson(res, 404, { error: 'Not found' });
+    return sendJson(res, 404, { error: 'Not found', parts: parts });
   }
 
-  // Collection: GET list / POST create-or-update
   if (!id) {
     if (req.method === 'GET') {
       return sendJson(
@@ -110,11 +123,10 @@ module.exports = function handler(req, res) {
     return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
-  // Item by id: GET / DELETE
   if (req.method === 'GET') {
     var item = store.read(id);
     if (!item) {
-      return sendJson(res, 404, { error: 'Item not found' });
+      return sendJson(res, 404, { error: 'Item not found', id: id });
     }
     return sendJson(res, 200, item);
   }
@@ -122,7 +134,7 @@ module.exports = function handler(req, res) {
   if (req.method === 'DELETE') {
     var removed = store.destroy(id);
     if (!removed) {
-      return sendJson(res, 404, { error: 'Item not found' });
+      return sendJson(res, 404, { error: 'Item not found', id: id });
     }
     return sendJson(res, 200, removed);
   }

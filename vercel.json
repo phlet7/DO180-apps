@@ -5,6 +5,9 @@
   "buildCommand": "mkdir -p public/todo && cp -a todoapp/html5/src/. public/ && cp -a todoapp/html5/src/. public/todo/",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/todo/api/:path*", "destination": "/api/todo/:path*" }
+    {
+      "source": "/todo/api/(.*)",
+      "destination": "/api/todo-api?p=$1"
+    }
   ]
 }
