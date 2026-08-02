@@ -93,7 +93,7 @@ app.controller('itemsFormController', function ($scope, $rootScope, itemService)
                 // Broadcast the event to refresh the grid.
                 $rootScope.$broadcast('refreshGrid');
                 // Broadcast the event to display a save message.
-                $rootScope.$broadcast('itemsaved');
+                $rootScope.$broadcast('itemSaved');
                 // XXX Generates null error in browser ?!?
                 $scope.clearForm();
             },

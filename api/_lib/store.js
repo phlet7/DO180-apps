@@ -4,22 +4,35 @@ var fs = require('fs');
 var path = require('path');
 
 var STORE_PATH = path.join('/tmp', 'do180-todo-items.json');
+var MEM_KEY = '__do180_todo_items__';
 
 function readItems() {
+  if (global[MEM_KEY] && Array.isArray(global[MEM_KEY])) {
+    return global[MEM_KEY].slice();
+  }
   try {
     if (!fs.existsSync(STORE_PATH)) {
+      global[MEM_KEY] = [];
       return [];
     }
     var raw = fs.readFileSync(STORE_PATH, 'utf8');
     var parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    var items = Array.isArray(parsed) ? parsed : [];
+    global[MEM_KEY] = items;
+    return items.slice();
   } catch (err) {
+    global[MEM_KEY] = [];
     return [];
   }
 }
 
 function writeItems(items) {
-  fs.writeFileSync(STORE_PATH, JSON.stringify(items), 'utf8');
+  global[MEM_KEY] = items.slice();
+  try {
+    fs.writeFileSync(STORE_PATH, JSON.stringify(items), 'utf8');
+  } catch (err) {
+    // Memory still holds the data for this warm isolate.
+  }
 }
 
 function nextId(items) {
